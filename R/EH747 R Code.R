@@ -278,3 +278,99 @@ cadmium.data %>%
   
 ######Get mean dose for exposed vs unexposed#####
 cadmium.data.meandose <- cadmium.data %>% group_by(exposure_factor) %>% summarize(meandose = mean(dose,na.rm=T))
+
+
+####Case 3####
+asthma.data <- read.csv(here::here("Data","asthma.csv"))
+summary(asthma.data)
+
+asthma.data <- asthma.data %>%
+  mutate(Asthma_factor = factor(Asthma,levels = c(0,1),labels = c("No Asthma","Asthma")),
+         Gender_factor = factor(Gender, levels= c(0,1)),
+         Parental_Asthma_History_factor = factor(Parental_Asthma_History, levels = c(0,1),labels = c("No PAH","Yes PAH")),
+         NO2_Quartile = cut(NO2, 
+                            breaks = quantile(NO2,probs = c(0,0.25,0.5,0.75,1)), 
+                            labels = c("First","Second","Third","Fourth"),
+                            right=FALSE,
+                            include.lowest=TRUE),
+         Income_Quartile = cut(Income, 
+                               breaks = quantile(Income,probs = c(0,0.25,0.5,0.75,1)), 
+                               labels = c("First","Second","Third","Fourth"),
+                               right=FALSE,
+                               include.lowest=TRUE)
+                           
+         ) %>%
+  mutate(NO2_first_quartile = ifelse(NO2_Quartile == "First",1,0),
+         NO2_second_quartile = ifelse(NO2_Quartile == "Second",1,0),
+         NO2_third_quartile = ifelse(NO2_Quartile == "Third",1,0),
+         NO2_fourth_quartile = ifelse(NO2_Quartile == "Fourth",1,0),
+         Income_first_quartile = ifelse(Income_Quartile == "First",1,0),
+         Income_second_quartile = ifelse(Income_Quartile == "Second",1,0),
+         Income_third_quartile = ifelse(Income_Quartile == "Third",1,0),
+         Income_fourth_quartile = ifelse(Income_Quartile == "Fourth",1,0))
+summary(asthma.data)
+
+logistic_model_NO2cont <- glm(Asthma_factor ~ NO2 + Gender_factor + Parental_Asthma_History_factor + Income_second_quartile + Income_third_quartile + Income_fourth_quartile, 
+                              family = binomial(link = "logit"),data = asthma.data)
+logistic_model_NO2quant <- glm(Asthma_factor ~ NO2_second_quartile + NO2_third_quartile + NO2_fourth_quartile +  Gender_factor + Parental_Asthma_History_factor + Income_second_quartile + Income_third_quartile + Income_fourth_quartile, 
+                               family = binomial(link = "logit"),data = asthma.data)
+
+cbind(coef(logistic_model_NO2cont),confint(logistic_model_NO2cont))
+#Income = continuous                                          2.5 %        97.5 %
+# (Intercept)                           -8.947303e+00 -1.093491e+01 -7.115745e+00
+# NO2                                    1.468365e-01  1.022815e-01  1.941701e-01
+# Gender_factor1                         9.789114e-01  4.604003e-01  1.518549e+00
+# Parental_Asthma_History_factorYes PAH  3.470165e+00  2.946150e+00  4.033142e+00
+# Income                                 2.965801e-06 -8.842975e-06  1.449948e-05
+
+#Income = categorical nominal                             2.5 %      97.5 %
+# (Intercept)                           -8.7874515 -10.7823772 -6.95150978
+# NO2                                    0.1525150   0.1066613  0.20133463
+# Gender_factor1                         1.0009771   0.4788751  1.54469254
+# Parental_Asthma_History_factorYes PAH  3.4925582   2.9644988  4.06026058
+# Income_second_quartile                -0.1309688  -0.8542194  0.58914543
+# Income_third_quartile                 -0.7099003  -1.4588138  0.02224836
+# Income_fourth_quartile                -0.2196052  -0.9188928  0.47628701
+
+cbind(coef(logistic_model_NO2quant),confint(logistic_model_NO2quant))
+#Income = continuous                                          2.5 %        97.5 %
+# (Intercept)                           -4.837983e+00 -5.858676e+00 -3.911337e+00
+# NO2_second_quartile                    2.570119e-01 -5.993841e-01  1.126454e+00
+# NO2_third_quartile                     1.450914e+00  6.642820e-01  2.284405e+00
+# NO2_fourth_quartile                    2.076913e+00  1.337004e+00  2.875240e+00
+# Gender_factor1                         9.894509e-01  4.697918e-01  1.530819e+00
+# Parental_Asthma_History_factorYes PAH  3.593442e+00  3.061127e+00  4.167235e+00
+# Income                                 2.297795e-06 -9.693807e-06  1.398346e-05
+
+#Income = categoricla nominal                           2.5 %      97.5 %
+# (Intercept)                           -4.5423028 -5.5410845 -3.64275036
+# NO2_second_quartile                    0.2908322 -0.5674080  1.16332269
+# NO2_third_quartile                     1.4406663  0.6474242  2.28127851
+# NO2_fourth_quartile                    2.1286082  1.3805245  2.93691034
+# Gender_factor1                         1.0051872  0.4825778  1.54975522
+# Parental_Asthma_History_factorYes PAH  3.6099956  3.0744740  4.18755091
+# Income_second_quartile                -0.1186325 -0.8414738  0.60083881
+# Income_third_quartile                 -0.6345041 -1.3775093  0.09319591
+# Income_fourth_quartile                -0.2054511 -0.9069424  0.49232693
+
+cbind(exp(coef(logistic_model_NO2cont)),exp(confint(logistic_model_NO2cont)))
+IQR(asthma.data$NO2)
+coef(logistic_model_NO2cont)[2]*IQR(asthma.data$NO2)
+exp(coef(logistic_model_NO2cont)[2]*IQR(asthma.data$NO2))
+
+
+366+365*4
+#1826 
+
+asthma.data.losttofu <- asthma.data %>%
+  mutate(lost_to_fu = ifelse(daysdiff < 1826, 1,0)) %>%
+  group_by(NO2_Quartile) %>%
+  summarise(lost_to_fu_percent = mean(lost_to_fu)*100)
+
+head(asthma.data.losttofu)
+#   NO2_Quartile lost_to_fu_percent
+#   <fct>                     <dbl>
+# 1 First                      37.5
+# 2 Second                     34  
+# 3 Third                      38  
+# 4 Fourth                     35
